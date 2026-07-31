@@ -45,13 +45,20 @@ def extract_financial_metrics(chunks: list[str]) -> dict:
     context = "\n\n".join(chunks)
     prompt = _EXTRACTION_PROMPT.format(fields=", ".join(METRIC_FIELDS), context=context)
 
+    res = {field: None for field in METRIC_FIELDS}
     if GROQ_API_KEY:
         try:
-            return _extract_via_groq(prompt)
+            res = _extract_via_groq(prompt)
         except Exception:
             pass  # fall through to regex fallback
 
-    return _extract_via_regex(context)
+    # Merge regex extraction fallback for any missing/null fields
+    regex_res = _extract_via_regex(context)
+    for field in METRIC_FIELDS:
+        if res.get(field) is None and regex_res.get(field) is not None:
+            res[field] = regex_res[field]
+
+    return res
 
 
 def _extract_via_groq(prompt: str) -> dict:

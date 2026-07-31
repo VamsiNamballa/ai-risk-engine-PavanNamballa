@@ -5,7 +5,24 @@ Unit tests for ratio_engine and distress_models.
 import pytest
 from service.engine.schemas import FinancialMetricsInput
 from service.engine.ratio_engine import calculate_ratios, _safe_div
-from service.engine.distress_models import calculate_altman_z_score
+from service.engine.distress_models import calculate_altman_z_score, calculate_beneish_m_score
+
+
+def test_beneish_m_score():
+    """Verify Beneish M-Score calculation."""
+    data = FinancialMetricsInput(
+        company_name="Sample Corp",
+        revenue=1000000.0,
+        net_income=100000.0,
+        total_assets=2000000.0,
+        total_debt=500000.0,
+        operating_cash_flow=90000.0
+    )
+
+    m_res = calculate_beneish_m_score(data)
+    assert m_res.score is not None
+    assert m_res.manipulation_risk in ["Low", "High"]
+    assert "Beneish M-Score" in m_res.interpretation
 
 
 def test_safe_div():

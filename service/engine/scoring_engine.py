@@ -14,7 +14,7 @@ from service.engine.schemas import (
     RiskAnalysisResult,
 )
 from service.engine.ratio_engine import calculate_ratios
-from service.engine.distress_models import calculate_altman_z_score
+from service.engine.distress_models import calculate_altman_z_score, calculate_beneish_m_score
 from service.engine.circuit_breakers import evaluate_circuit_breakers
 
 
@@ -30,6 +30,30 @@ RATIO_BOUNDS: Dict[str, tuple[float, float, bool]] = {
     "ebitda_margin":            (0.0, 0.25, False),
     "roa":                      (0.0, 0.10, False),
     "roe":                      (0.0, 0.18, False),
+}
+
+# Sector-specific benchmark ratio bounds overrides
+SECTOR_RATIO_BOUNDS: Dict[str, Dict[str, tuple[float, float, bool]]] = {
+    "technology": {
+        "debt_to_equity": (0.2, 1.5, True),
+        "current_ratio":  (1.2, 3.0, False),
+        "quick_ratio":    (1.0, 2.5, False),
+        "net_margin":     (0.05, 0.25, False),
+    },
+    "utilities": {
+        "debt_to_equity": (1.0, 4.0, True),
+        "debt_ratio":     (0.4, 0.85, True),
+        "current_ratio":  (0.5, 1.2, False),
+    },
+    "retail": {
+        "current_ratio":  (0.9, 2.2, False),
+        "quick_ratio":    (0.3, 1.2, False),
+        "net_margin":     (0.01, 0.08, False),
+    },
+    "manufacturing": {
+        "debt_to_equity": (0.4, 2.5, True),
+        "current_ratio":  (1.0, 2.2, False),
+    }
 }
 
 # Category Weights
@@ -48,12 +72,20 @@ CATEGORY_RATIOS = {
 }
 
 
-def _score_ratio_continuous(name: str, value: Optional[float]) -> Optional[float]:
-    """Linearly interpolates ratio value to a continuous 0-100 score."""
-    if value is None or name not in RATIO_BOUNDS:
+def _get_bounds_for_sector(name: str, sector: str = "General") -> Optional[tuple[float, float, bool]]:
+    sec_key = (sector or "General").lower()
+    if sec_key in SECTOR_RATIO_BOUNDS and name in SECTOR_RATIO_BOUNDS[sec_key]:
+        return SECTOR_RATIO_BOUNDS[sec_key][name]
+    return RATIO_BOUNDS.get(name)
+
+
+def _score_ratio_continuous(name: str, value: Optional[float], sector: str = "General") -> Optional[float]:
+    """Linearly interpolates ratio value to a continuous 0-100 score considering industry sector benchmarks."""
+    bounds = _get_bounds_for_sector(name, sector)
+    if value is None or bounds is None:
         return None
 
-    min_b, max_b, lower_is_better = RATIO_BOUNDS[name]
+    min_b, max_b, lower_is_better = bounds
 
     if lower_is_better:
         if value <= min_b:
@@ -69,7 +101,7 @@ def _score_ratio_continuous(name: str, value: Optional[float]) -> Optional[float
         return round(100.0 * ((value - min_b) / (max_b - min_b)), 1)
 
 
-def compute_category_scores(ratios: ComputedRatios) -> CategoryScores:
+def compute_category_scores(ratios: ComputedRatios, sector: str = "General") -> CategoryScores:
     """Computes averaged scores (0-100) for each of the 4 financial categories."""
     ratio_dict = ratios.model_dump()
     cat_scores = {}
@@ -78,7 +110,7 @@ def compute_category_scores(ratios: ComputedRatios) -> CategoryScores:
         scores = []
         for key in ratio_keys:
             val = ratio_dict.get(key)
-            s = _score_ratio_continuous(key, val)
+            s = _score_ratio_continuous(key, val, sector=sector)
             if s is not None:
                 scores.append(s)
         
@@ -127,14 +159,17 @@ def analyze_financial_risk(data: FinancialMetricsInput) -> RiskAnalysisResult:
     # 1. Compute Ratios & Data Confidence
     ratios, confidence = calculate_ratios(data)
 
-    # 2. Compute Altman Z-Score
+    # 2. Compute Altman Z-Score & Beneish M-Score
     z_res = calculate_altman_z_score(data)
+    m_res = calculate_beneish_m_score(data)
 
     # 3. Evaluate Circuit Breakers
     cb_codes, cb_flags, max_score_cap = evaluate_circuit_breakers(data, ratios, z_res)
+    if m_res.manipulation_risk == "High":
+        cb_flags.append(m_res.interpretation)
 
-    # 4. Compute Category Sub-Scores
-    cat_scores = compute_category_scores(ratios)
+    # 4. Compute Category Sub-Scores with sector benchmarking
+    cat_scores = compute_category_scores(ratios, sector=data.industry_sector)
 
     # 5. Compute Weighted Overall Risk Score
     weighted_sum = 0.0
@@ -190,6 +225,7 @@ def analyze_financial_risk(data: FinancialMetricsInput) -> RiskAnalysisResult:
         circuit_breakers_triggered=cb_codes,
         category_scores=cat_scores,
         altman_z_score=z_res,
+        beneish_m_score=m_res,
         computed_ratios=ratios,
         risk_flags=all_flags,
         actionable_recommendations=recommendations,

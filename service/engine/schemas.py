@@ -64,6 +64,13 @@ class AltmanZScoreResult(BaseModel):
     interpretation: str = Field(default="Insufficient data to compute Altman Z-Score", description="Human-readable description")
 
 
+class BeneishMScoreResult(BaseModel):
+    """Beneish M-Score earnings manipulation and accounting risk output."""
+    score: Optional[float] = Field(default=None, description="Computed M-Score value")
+    manipulation_risk: str = Field(default="Unknown", description="Low | High | Unknown")
+    interpretation: str = Field(default="Insufficient data to compute Beneish M-Score", description="Human-readable description")
+
+
 class RiskAnalysisResult(BaseModel):
     """Final output payload produced by Risk Analysis Agent for Report Generation Agent."""
     company_name: str
@@ -77,6 +84,7 @@ class RiskAnalysisResult(BaseModel):
     circuit_breakers_triggered: List[str] = Field(default_factory=list, description="Red-flag override codes")
     category_scores: CategoryScores = Field(default_factory=CategoryScores)
     altman_z_score: AltmanZScoreResult = Field(default_factory=AltmanZScoreResult)
+    beneish_m_score: BeneishMScoreResult = Field(default_factory=BeneishMScoreResult)
     computed_ratios: ComputedRatios = Field(default_factory=ComputedRatios)
     
     risk_flags: List[str] = Field(default_factory=list, description="Detailed warning flags")
