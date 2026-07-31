@@ -25,6 +25,20 @@ def test_beneish_m_score():
     assert "Beneish M-Score" in m_res.interpretation
 
 
+def test_yoy_growth_ratios():
+    """Verify YoY revenue and net income growth ratio calculations."""
+    data = FinancialMetricsInput(
+        company_name="Growth Corp",
+        revenue=12000000.0,
+        prior_revenue=10000000.0,
+        net_income=1500000.0,
+        prior_net_income=1000000.0,
+    )
+    ratios, _ = calculate_ratios(data)
+    assert ratios.revenue_growth_yoy == pytest.approx(0.20)     # +20% YoY
+    assert ratios.net_income_growth_yoy == pytest.approx(0.50)  # +50% YoY
+
+
 def test_safe_div():
     """Verify safe division function."""
     assert _safe_div(10, 2) == 5.0

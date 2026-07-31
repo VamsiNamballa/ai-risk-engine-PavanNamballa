@@ -47,6 +47,15 @@ def calculate_ratios(data: FinancialMetricsInput) -> Tuple[ComputedRatios, float
     roa = _safe_div(data.net_income, data.total_assets)
     roe = _safe_div(data.net_income, data.total_equity)
 
+    # 5. YoY Growth Trajectory
+    revenue_growth_yoy = None
+    if data.revenue is not None and data.prior_revenue is not None and data.prior_revenue > 0:
+        revenue_growth_yoy = (data.revenue - data.prior_revenue) / data.prior_revenue
+
+    net_income_growth_yoy = None
+    if data.net_income is not None and data.prior_net_income is not None and data.prior_net_income != 0:
+        net_income_growth_yoy = (data.net_income - data.prior_net_income) / abs(data.prior_net_income)
+
     ratios = ComputedRatios(
         current_ratio=current_ratio,
         quick_ratio=quick_ratio,
@@ -57,7 +66,9 @@ def calculate_ratios(data: FinancialMetricsInput) -> Tuple[ComputedRatios, float
         roa=roa,
         roe=roe,
         ebitda_margin=ebitda_margin,
-        cash_flow_ratio=cash_flow_ratio
+        cash_flow_ratio=cash_flow_ratio,
+        revenue_growth_yoy=revenue_growth_yoy,
+        net_income_growth_yoy=net_income_growth_yoy,
     )
 
     # Compute Data Completeness Confidence %

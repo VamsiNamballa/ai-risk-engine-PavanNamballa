@@ -11,6 +11,7 @@ from service.engine.chunker import chunk_text
 from service.engine.vector_store import embed_chunks, store_chunks, add_to_store, search_chunks
 from service.engine.response_generator import generate_response
 from service.engine.risk_calculator import extract_financial_metrics, calculate_ratios, classify_risk
+from service.engine.db_store import save_assessment_record
 
 router = APIRouter(prefix="/pipeline")
 
@@ -140,6 +141,19 @@ async def pipeline_ask(
 
         verdict = result.get("verdict", "Neutral")
         score   = result.get("score", result.get("risk_score", 50))
+
+        # Auto-persist assessment history record in SQLite database
+        try:
+            record_payload = {
+                "company_name": metrics.get("company_name", "Target Firm") if risk_result else "Target Firm",
+                "risk_score": score,
+                "risk_level": risk_result["risk_level"] if risk_result else "Moderate",
+                "data_confidence": 85.0,
+            }
+            save_assessment_record(session_id, record_payload)
+        except Exception:
+            pass
+
         yield sse({
             "stage": "generate", "status": "done",
             "message": "Assessment complete",

@@ -30,9 +30,11 @@ class FinancialMetricsInput(BaseModel):
     ebitda: Optional[float] = Field(default=None, description="EBITDA")
     operating_cash_flow: Optional[float] = Field(default=None, description="Operating Cash Flow")
 
-    # Extended metrics for distress modeling (Altman Z-Score)
+    # Extended metrics for distress modeling & growth tracking
     retained_earnings: Optional[float] = Field(default=None, description="Retained Earnings")
     market_val_equity: Optional[float] = Field(default=None, description="Market Value of Equity / Market Cap")
+    prior_revenue: Optional[float] = Field(default=None, description="Prior Fiscal Year Revenue")
+    prior_net_income: Optional[float] = Field(default=None, description="Prior Fiscal Year Net Income")
 
 
 class ComputedRatios(BaseModel):
@@ -47,6 +49,8 @@ class ComputedRatios(BaseModel):
     roe: Optional[float] = None
     ebitda_margin: Optional[float] = None
     cash_flow_ratio: Optional[float] = None
+    revenue_growth_yoy: Optional[float] = None
+    net_income_growth_yoy: Optional[float] = None
 
 
 class CategoryScores(BaseModel):
