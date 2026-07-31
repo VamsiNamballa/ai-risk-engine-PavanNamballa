@@ -1,13 +1,14 @@
 import json
 import asyncio
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from typing import Optional
+from fastapi import APIRouter, UploadFile, File, HTTPException, Header
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 
 from service.engine.text_extractor import extract_text
 from service.engine.chunker import chunk_text
-from service.engine.vector_store import embed_chunks, add_to_store, search_chunks
+from service.engine.vector_store import embed_chunks, store_chunks, add_to_store, search_chunks
 from service.engine.response_generator import generate_response
 from service.engine.risk_calculator import extract_financial_metrics, calculate_ratios, classify_risk
 
@@ -19,11 +20,15 @@ def sse(data: dict) -> str:
 
 
 @router.post("/upload")
-async def pipeline_upload(file: UploadFile = File(...)):
+async def pipeline_upload(
+    file: UploadFile = File(...),
+    x_session_id: Optional[str] = Header(default="default", alias="X-Session-ID")
+):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
     content = await file.read()
+    session_id = x_session_id or "default"
 
     async def stream():
         # Stage 1: Extract
@@ -62,7 +67,7 @@ async def pipeline_upload(file: UploadFile = File(...)):
         # Stage 4: Store
         yield sse({"stage": "store", "status": "running", "message": "Storing vectors in memory..."})
         try:
-            await asyncio.to_thread(add_to_store, chunks, embeddings)
+            await asyncio.to_thread(store_chunks, chunks, session_id=session_id, clear_existing=True)
         except Exception as e:
             yield sse({"stage": "store", "status": "error", "message": f"Store failed: {e}"})
             return
@@ -70,6 +75,7 @@ async def pipeline_upload(file: UploadFile = File(...)):
             "stage": "store", "status": "done",
             "message": f"{len(chunks)} vectors stored",
             "chunks_stored": len(chunks),
+            "session_id": session_id,
         })
 
         yield sse({"stage": "complete", "status": "done"})
@@ -83,18 +89,25 @@ async def pipeline_upload(file: UploadFile = File(...)):
 
 class AskPayload(BaseModel):
     query: str
+    session_id: Optional[str] = "default"
 
 
 @router.post("/ask")
-async def pipeline_ask(payload: AskPayload):
+async def pipeline_ask(
+    payload: AskPayload,
+    x_session_id: Optional[str] = Header(default=None, alias="X-Session-ID")
+):
+    session_id = payload.session_id if payload.session_id != "default" else (x_session_id or "default")
+
     async def stream():
         # Stage 1: Search
         yield sse({"stage": "search", "status": "running", "message": "Embedding query + searching vectors..."})
-        chunks = await asyncio.to_thread(search_chunks, payload.query)
+        chunks = await asyncio.to_thread(search_chunks, payload.query, n=3, session_id=session_id)
         yield sse({
             "stage": "search", "status": "done",
             "message": f"Found {len(chunks)} relevant chunks",
             "chunks": chunks,
+            "session_id": session_id,
         })
 
         # Stage 1.5: Deterministic risk calculation
