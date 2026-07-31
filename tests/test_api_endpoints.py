@@ -41,3 +41,12 @@ def test_ask_endpoint_with_session_id():
     assert "question" in data
     assert "executive_summary" in data
     assert data["session_id"] == "test_session_api"
+
+
+def test_history_endpoint():
+    """Verify GET /history returns historical records payload."""
+    response = client.get("/history")
+    assert response.status_code == 200
+    data = response.json()
+    assert "history" in data
+    assert isinstance(data["history"], list)

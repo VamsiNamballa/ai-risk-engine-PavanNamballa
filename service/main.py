@@ -8,6 +8,7 @@ from service.api.upload_api import router as upload_router
 from service.api.ask_api import router as ask_router
 from service.api.pipeline_api import router as pipeline_router
 from service.engine.response_generator import active_model
+from service.engine.db_store import get_assessment_history
 
 app = FastAPI(title="AI Risk Engine")
 
@@ -28,6 +29,10 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 @app.get("/config")
 def config():
     return {"model": active_model()}
+
+@app.get("/history")
+def history(limit: int = 20):
+    return {"history": get_assessment_history(limit=limit)}
 
 @app.get("/")
 def home():

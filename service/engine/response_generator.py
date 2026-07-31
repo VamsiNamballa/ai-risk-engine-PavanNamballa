@@ -63,21 +63,28 @@ def _empty_response():
 
 
 def _generate_groq(prompt):
-    response = requests.post(
-        GROQ_URL,
-        headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
-        json={
-            "model": GROQ_MODEL,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            "response_format": {"type": "json_object"},
-        },
-    )
-    if not response.ok:
-        raise RuntimeError(f"Groq {response.status_code}: {response.text}")
-    return json.loads(response.json()["choices"][0]["message"]["content"])
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                GROQ_URL,
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "model": GROQ_MODEL,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "response_format": {"type": "json_object"},
+                },
+                timeout=15,
+            )
+            if not response.ok:
+                raise RuntimeError(f"Groq {response.status_code}: {response.text}")
+            return json.loads(response.json()["choices"][0]["message"]["content"])
+        except Exception as e:
+            if attempt == 2:
+                raise RuntimeError(f"Groq generation failed after 3 attempts: {e}")
+            time.sleep(2 ** attempt)
 
 
 def _generate_gemini(prompt):
