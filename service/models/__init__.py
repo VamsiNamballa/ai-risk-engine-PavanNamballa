@@ -12,6 +12,7 @@ from service.models.risk_analysis import (
     ScoreComponent,
     ToolExecution,
     ValidationSeverity,
+    RiskAnalysisPlan,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "ScoreComponent",
     "ToolExecution",
     "ValidationSeverity",
+    "RiskAnalysisPlan",
 ]

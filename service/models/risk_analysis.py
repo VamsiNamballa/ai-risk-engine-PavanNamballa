@@ -79,9 +79,17 @@ class RiskAnalysisInput(BaseModel):
 
 class AnalysisSelection(BaseModel):
     analysis_name: str
+    tool_name: str
     reason: str
     required_metrics: List[str] = Field(default_factory=list)
+    missing_metrics: List[str] = Field(default_factory=list)
+    reporting_periods: List[str] = Field(default_factory=list)
 
+class RiskAnalysisPlan(BaseModel):
+    detected_intents: List[str] = Field(default_factory=list)
+    selected_analyses: List[AnalysisSelection] = Field(default_factory=list)
+    skipped_analyses: List[AnalysisSelection] = Field(default_factory=list)
+    available_reporting_periods: List[str] = Field(default_factory=list)
 
 class ToolExecution(BaseModel):
     tool_name: str
