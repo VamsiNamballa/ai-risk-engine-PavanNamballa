@@ -17,7 +17,41 @@ class ConfidenceLevel(str, Enum):
     MEDIUM = "Medium"
     HIGH = "High"
 
+class ValidationSeverity(str, Enum):
+    WARNING = "warning"
+    ERROR = "error"
 
+
+class MetricValidationIssue(BaseModel):
+    code: str
+    message: str
+    severity: ValidationSeverity
+    metric_names: List[str] = Field(default_factory=list)
+    reporting_period: Optional[str] = None
+    evidence_ids: List[str] = Field(default_factory=list)
+
+
+class MetricValidationResult(BaseModel):
+    is_valid: bool
+    valid_metrics: List["FinancialMetric"] = Field(default_factory=list)
+    issues: List[MetricValidationIssue] = Field(default_factory=list)
+
+    @property
+    def errors(self) -> List[MetricValidationIssue]:
+        return [
+            issue
+            for issue in self.issues
+            if issue.severity == ValidationSeverity.ERROR
+        ]
+
+    @property
+    def warnings(self) -> List[MetricValidationIssue]:
+        return [
+            issue
+            for issue in self.issues
+            if issue.severity == ValidationSeverity.WARNING
+        ]
+    
 class EvidenceItem(BaseModel):
     evidence_id: str = Field(min_length=1)
     document_id: Optional[str] = None

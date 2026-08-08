@@ -3,12 +3,15 @@ from service.models.risk_analysis import (
     ConfidenceLevel,
     EvidenceItem,
     FinancialMetric,
+    MetricValidationIssue,
+    MetricValidationResult,
     RiskAnalysisInput,
     RiskAnalysisResult,
     RiskFactor,
     RiskLevel,
     ScoreComponent,
     ToolExecution,
+    ValidationSeverity,
 )
 
 __all__ = [
@@ -16,10 +19,13 @@ __all__ = [
     "ConfidenceLevel",
     "EvidenceItem",
     "FinancialMetric",
+    "MetricValidationIssue",
+    "MetricValidationResult",
     "RiskAnalysisInput",
     "RiskAnalysisResult",
     "RiskFactor",
     "RiskLevel",
     "ScoreComponent",
     "ToolExecution",
+    "ValidationSeverity",
 ]
