@@ -23,6 +23,14 @@ SUPPORTED_METRICS = {
     "interest_expense",
     "ebitda",
     "operating_cash_flow",
+    "accounts_receivable",
+    "cost_of_goods_sold",
+    "property_plant_equipment",
+    "depreciation",
+    "selling_general_admin_expense",
+    "retained_earnings",
+    "market_value_equity",
+    "total_liabilities",
 }
 
 NON_NEGATIVE_METRICS = {
@@ -33,6 +41,13 @@ NON_NEGATIVE_METRICS = {
     "inventory",
     "total_assets",
     "interest_expense",
+    "accounts_receivable",
+    "cost_of_goods_sold",
+    "property_plant_equipment",
+    "depreciation",
+    "selling_general_admin_expense",
+    "market_value_equity",
+    "total_liabilities",
 }
 
 UNIT_ALIASES = {
