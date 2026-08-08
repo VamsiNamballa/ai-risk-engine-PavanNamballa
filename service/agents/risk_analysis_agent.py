@@ -1,5 +1,9 @@
 from typing import List
 
+from service.engine.risk_scoring import (
+    calculate_explainable_risk_score,
+)
+
 from service.agents.risk_analysis_planner import (
     create_risk_analysis_plan,
 )
@@ -314,6 +318,16 @@ def run_risk_analysis_agent(
         if execution.error
     ]
 
+    (
+        overall_risk_score,
+        risk_level,
+        confidence,
+        score_breakdown,
+    ) = calculate_explainable_risk_score(
+        executions=executions,
+        missing_data_count=len(missing_data),
+        conflict_count=len(conflicts),
+    )         
     completed_count = sum(
         execution.status in {"completed", "partial"}
         for execution in executions
@@ -334,9 +348,10 @@ def run_risk_analysis_agent(
         protective_factors=protective_factors,
         missing_data=missing_data,
         conflicts=conflicts,
-        overall_risk_score=None,
-        risk_level=RiskLevel.UNKNOWN,
-        confidence=ConfidenceLevel.LOW,
+        score_breakdown=score_breakdown,
+        overall_risk_score=overall_risk_score,
+        risk_level=risk_level,
+        confidence=confidence,
         reasoning_summary=reasoning_summary,
         iteration_count=MAX_AGENT_ITERATIONS,
     )
